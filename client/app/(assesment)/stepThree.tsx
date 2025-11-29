@@ -28,7 +28,7 @@ const stepThree = () => {
           padding:8
         }}
         ><Ionicons name='chevron-back' size={20} color={'#000'}/></TouchableOpacity>
-        <View style={{flex:1}}>
+        <View style={{flex:1}}>q
           <ProgressBar step={3} total={15}/>
         </View>
         
