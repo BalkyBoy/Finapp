@@ -12,22 +12,19 @@ const login = () => {
      <SafeAreaView
        style={{
         flex:1,
-        backgroundColor:'#FADB8A'
+        backgroundColor:'white'
        }}
        >
         <View
         style={{
             padding:16,
-            
-          
         }}
         >
             <View 
             style={{
-                flexDirection:'row',
-                justifyContent:'space-between',
                 alignItems:'center',
                 marginBottom:20,
+                padding:16
             }}
             >
             <TouchableOpacity
@@ -38,10 +35,10 @@ const login = () => {
                 justifyContent:'center',
                 borderRadius:10,
             }}
+            onPress={() => router.back()}
             >
                 <Image source={require('@/assets/images/Left.png')}/>
-            </TouchableOpacity>
-            <Text>Skip</Text>
+            </TouchableOpacity> 
             </View>
             <View>
                 <Text
