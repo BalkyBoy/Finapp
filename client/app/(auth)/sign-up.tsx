@@ -9,17 +9,13 @@ import {
   Platform,
   TextInput,
 } from "react-native";
-import React, { useState } from "react";
+import React, { use, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import Checkbox from "@/components/Checkbox";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
-import { useEffect } from "react";
-import { signInWithCredential, GoogleAuthProvider } from "firebase/auth";
-import { auth } from "@/firebaseConfig";
-
+import { Controller, useForm } from "react-hook-form";
 WebBrowser.maybeCompleteAuthSession();
 
 const SignUp = () => {
@@ -28,48 +24,15 @@ const SignUp = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId:
-      "856764674333-uu5f6no67581v7ih668s3skrp7mf4qdm.apps.googleusercontent.com",
-    iosClientId: "1:94539031347:ios:067705d917574ffc7e5446",
-    androidClientId: "1:94539031347:android:a5f262140db335907e5446",
-    webClientId: "1:94539031347:web:5f7741a2d53fec5f7e5446",
-  });
-  // useEffect(() => {
-  //     const loginWithGoogle = async () => {
-  //         if (response?.type === 'success'){
-  //             const {id_token} = response.params;
-
-  //             const credential = GoogleAuthProvider.credential(id_token);
-  //             const userCredential = await signInWithCredential(auth, credential);
-
-  //             const firebaseToken = await userCredential.user.getIdToken();
-
-  //             const res = await fetch('http://192.168.197.67:3000/auth/firebase',{
-  //                 method:'POST',
-  //                 headers: {'Content-Type': 'application/json'},
-  //                 body:JSON.stringify({token: firebaseToken}),
-  //             });
-
-  //             const data = await res.json();
-  //             requestAnimationFrame(()=> {
-
-  //             if (res.ok) {
-  //                 if (data.requireOtp) {
-  //                     router.replace('/(auth)/verification');
-  //                 } else {
-  //                     router.push('/(tabs)/Dashboard');
-  //                 }
-  //             } else {
-  //                 alert(data.message || 'Google login failed')
-  //             }
-  //             })
-  //         }
-  //     };
-  //     loginWithGoogle();
-  // }, [response]);
-
-  const handleSubmit = async () => {
+  
+  const {control, handleSubmit, formState: {errors}} = useForm({
+    defaultValues: {
+      fullName: "",
+      email: "",
+      password: "",
+    }
+  })
+  const onSubmit = async () => {
     if (!fullName || !email || !password) {
       alert("Please fill in all fields.");
       return;
@@ -168,7 +131,12 @@ const SignUp = () => {
                 position: "relative",
               }}
             >
-              <TextInput
+              <Controller
+              control={control}
+              name="fullName"
+              rules={{required: "Full Name is required"}}
+              render={({field: {onChange, value, onBlur}})=> (
+                <TextInput
                 style={{
                   height: 56,
                   borderWidth: 1,
@@ -184,6 +152,9 @@ const SignUp = () => {
                 onChangeText={setFullName}
                 placeholderTextColor={"#000"}
               />
+              )}
+              /> 
+              {errors.fullName && <Text style={{color: 'red', fontSize: 12}}>{errors.fullName.message}</Text>}
             </View>
             <View
               style={{
@@ -191,7 +162,15 @@ const SignUp = () => {
                 position: "relative",
               }}
             >
-              <TextInput
+              <Controller
+              control={control}
+              name="email"
+              rules={{
+                required: "Email is required",
+                pattern: { value: /\S+@\S+\.\S+/, message: "Invalid email format"},
+              }}
+              render={({field: {onChange, value, onBlur}})=> (
+                <TextInput
                 style={{
                   height: 56,
                   borderWidth: 1,
@@ -209,6 +188,9 @@ const SignUp = () => {
                 autoCapitalize="none"
                 placeholderTextColor={"#000"}
               />
+              )}
+              />
+              {errors.email && <Text style={{color: 'red', fontSize: 12}}>{errors.email.message}</Text>}
             </View>
             <View
               style={{
@@ -216,7 +198,13 @@ const SignUp = () => {
                 position: "relative",
               }}
             >
-              <TextInput
+              <Controller
+              control={control}
+              name="password"
+              rules={{required: "Password is required", minLength:{value: 6, message: "Minimum 6 characters"} }}
+              render={({field: {onChange, value, onBlur}})=> (
+                <View style={{position:"relative"}}>
+                  <TextInput
                 style={{
                   height: 56,
                   borderWidth: 1,
@@ -247,6 +235,10 @@ const SignUp = () => {
                   color={"#5C8943"}
                 />
               </TouchableOpacity>
+                </View>
+              )}
+              />
+              {errors.password && <Text style={{color: 'red', fontSize: 12}}>{errors.password.message}</Text>}
             </View>
             <View
               style={{
@@ -260,6 +252,9 @@ const SignUp = () => {
                 checked={agreeToTerms}
                 onPress={() => setAgreeToTerms(!agreeToTerms)}
               />
+              <TouchableOpacity 
+              onPress={()=> router.push('/(terms)/terms')}
+              >
               <Text
                 style={{
                   flex: 1,
@@ -294,7 +289,9 @@ const SignUp = () => {
                   Policy
                 </Text>
               </Text>
+              </TouchableOpacity>
             </View>
+            
             <TouchableOpacity
               style={{
                 backgroundColor: "#CAA362",
@@ -348,7 +345,7 @@ const SignUp = () => {
               />
             </View>
             <TouchableOpacity
-              onPress={() => promptAsync()}
+              // onPress={() => promptAsync()}
               style={{
                 flexDirection: "row",
                 height: 56,
