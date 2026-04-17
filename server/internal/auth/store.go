@@ -13,12 +13,12 @@ import (
 )
 
 var (
-	users              = make(map[string]User)
-	usersByID          = make(map[int]User)
-	usersByEmail       = make(map[string]User)
-	refreshTokens      = make(map[string]RefreshToken)
+	users               = make(map[string]User)
+	usersByID           = make(map[int]User)
+	usersByEmail        = make(map[string]User)
+	refreshTokens       = make(map[string]RefreshToken)
 	passwordResetTokens = make(map[string]PasswordResetToken)
-	userIDCounter      = 1
+	userIDCounter       = 1
 )
 
 // Session store
@@ -52,15 +52,16 @@ var (
 
 	oauthStateString = ""
 )
+
 func init() {
 	// Initialize with test users
 	hashedPass, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 	user := User{
-		ID:        userIDCounter,
-		Username:  "alice",
-		Email:     "alice@example.com",
-		Password:  string(hashedPass),
-		CreatedAt: time.Now(),
+		ID:           userIDCounter,
+		Username:     "alice",
+		Email:        "alice@example.com",
+		PasswordHash: string(hashedPass),
+		CreatedAt:    time.Now(),
 	}
 	users[user.Username] = user
 	usersByID[user.ID] = user

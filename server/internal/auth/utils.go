@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"time"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -29,16 +30,16 @@ func generateRefreshToken(userID int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	token := base64.URLEncoding.EncodeToString(b)
 	expiresAt := time.Now().Add(7 * 24 * time.Hour) // 7 days
-	
+
 	refreshTokens[token] = RefreshToken{
 		Token:     token,
 		UserID:    userID,
 		ExpiresAt: expiresAt,
 	}
-	
+
 	return token, nil
 }
 
@@ -48,16 +49,16 @@ func generatePasswordResetToken(userID int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	token := base64.URLEncoding.EncodeToString(b)
 	expiresAt := time.Now().Add(1 * time.Hour) // 1 hour
-	
+
 	passwordResetTokens[token] = PasswordResetToken{
 		Token:     token,
 		UserID:    userID,
 		ExpiresAt: expiresAt,
 	}
-	
+
 	return token, nil
 }
 

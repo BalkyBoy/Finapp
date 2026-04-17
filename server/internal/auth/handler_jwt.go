@@ -4,237 +4,217 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-	"time"
-
-	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 )
 
-func RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var creds Credentials
-	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	if err := validatePassword(creds.Password); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if _, exists := users[creds.Username]; exists {
-		http.Error(w, "Username already exists", http.StatusConflict)
-		return
-	}
-	if _, exists := usersByEmail[creds.Email]; exists {
-		http.Error(w, "Email already exists", http.StatusConflict)
-		return
-	}
-
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
-	user := User{
-		ID:        userIDCounter,
-		Username:  creds.Username,
-		Email:     creds.Email,
-		Password:  string(hashedPassword),
-		CreatedAt: time.Now(),
-	}
-	users[user.Username] = user
-	usersByID[user.ID] = user
-	usersByEmail[user.Email] = user
-	userIDCounter++
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "User created successfully",
-		"user":    user,
-	})
+type Handler struct {
+	service *Service
 }
 
-func LoginHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var creds Credentials
-	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	var user User
-	var exists bool
-
-	if strings.Contains(creds.Username, "@") {
-		user, exists = usersByEmail[creds.Username]
-	} else {
-		user, exists = users[creds.Username]
-	}
-
-	if !exists || bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(creds.Password)) != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-		return
-	}
-
-	expirationTime := time.Now().Add(15 * time.Minute)
-	accessToken, _ := generateToken(user, expirationTime)
-	refreshToken, _ := generateRefreshToken(user.ID)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-		"expires_at":    expirationTime.Format(time.RFC3339),
-		"user":          user,
-	})
+func NewHandler(service *Service) *Handler {
+	return &Handler{service: service}
 }
 
-func RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req struct {
-		RefreshToken string `json:"refresh_token"`
-	}
+func (h *Handler) SignupHandler(w http.ResponseWriter, r *http.Request) {
+	var req SignupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		writeError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	rt, exists := refreshTokens[req.RefreshToken]
-	if !exists || time.Now().After(rt.ExpiresAt) {
-		http.Error(w, "Invalid or expired refresh token", http.StatusUnauthorized)
+	if req.Username == "" || req.Email == "" || req.Password == "" {
+		writeError(w, "username, email and password are required", http.StatusBadRequest)
 		return
 	}
 
-	user, exists := usersByID[rt.UserID]
-	if !exists {
-		http.Error(w, "User not found", http.StatusUnauthorized)
+	if err := h.service.Signup(req); err != nil {
+		switch err {
+		case ErrEmailTaken:
+			writeError(w, err.Error(), http.StatusConflict)
+		case ErrUsernameTaken:
+			writeError(w, err.Error(), http.StatusConflict)
+		case ErrWeakPassword:
+			writeError(w, err.Error(), http.StatusBadRequest)
+		default:
+			writeError(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 
-	expirationTime := time.Now().Add(15 * time.Minute)
-	accessToken, _ := generateToken(user, expirationTime)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"access_token": accessToken,
-		"expires_at":   expirationTime.Format(time.RFC3339),
-	})
+	writeJSON(w, http.StatusCreated, MessageResponse{Message: "account created, please log in"})
 }
 
-func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req struct {
-		Email string `json:"email"`
-	}
+func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		writeError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	user, exists := usersByEmail[req.Email]
-	if !exists {
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{
-			"message": "If the email exists, a reset link has been sent",
-		})
+	if req.Email == "" || req.Password == "" {
+		writeError(w, "email and password are required", http.StatusBadRequest)
 		return
 	}
 
-	token, _ := generatePasswordResetToken(user.ID)
-	// In production, send email
-	// Here we log the link for demo
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Password reset link sent (check server logs for demo)",
-		"token":   token,
+	token, user, err := h.service.Login(req)
+	if err != nil {
+		switch err {
+		case ErrInvalidCredentials:
+			writeError(w, err.Error(), http.StatusUnauthorized)
+		default:
+			writeError(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, AuthResponse{
+		Token: token,
+		User:  toUserResponse(user),
 	})
 }
 
-func ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func (h *Handler) AddPhoneHandler(w http.ResponseWriter, r *http.Request) {
+	claims, err := extractClaims(r)
+	if err != nil {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	var req struct {
-		Token       string `json:"token"`
-		NewPassword string `json:"new_password"`
-	}
+	var req AddPhoneRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		writeError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	resetToken, exists := passwordResetTokens[req.Token]
-	if !exists || time.Now().After(resetToken.ExpiresAt) {
-		http.Error(w, "Invalid or expired reset token", http.StatusUnauthorized)
+	if req.Phone == "" {
+		writeError(w, "phone is required", http.StatusBadRequest)
 		return
 	}
 
-	if err := validatePassword(req.NewPassword); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := h.service.AddPhone(claims.UserID, req.Phone); err != nil {
+		switch err {
+		case ErrPhoneTaken:
+			writeError(w, err.Error(), http.StatusConflict)
+		default:
+			writeError(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
-	user := usersByID[resetToken.UserID]
-	user.Password = string(hashedPassword)
-	users[user.Username] = user
-	usersByID[user.ID] = user
-	usersByEmail[user.Email] = user
-
-	delete(passwordResetTokens, req.Token)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Password reset successfully",
-	})
+	writeJSON(w, http.StatusOK, MessageResponse{Message: "OTP sent to your phone"})
 }
 
-// Protected JWT endpoint
-func ProtectedHandler(w http.ResponseWriter, r *http.Request) {
+// POST /auth/resend  (requires JWT)
+func (h *Handler) ResendOTPHandler(w http.ResponseWriter, r *http.Request) {
+	claims, err := extractClaims(r)
+	if err != nil {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req ResendOTPRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.ResendOTP(claims.UserID, req.Phone); err != nil {
+		switch err {
+		case ErrAlreadyVerified:
+			writeError(w, err.Error(), http.StatusConflict)
+		case ErrTooManyRequests:
+			writeError(w, err.Error(), http.StatusTooManyRequests)
+		case ErrResendLimit:
+			writeError(w, err.Error(), http.StatusTooManyRequests)
+		default:
+			writeError(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, MessageResponse{Message: "OTP resent successfully"})
+}
+
+// POST /auth/verify  (requires JWT)
+func (h *Handler) VerifyOTPHandler(w http.ResponseWriter, r *http.Request) {
+	claims, err := extractClaims(r)
+	if err != nil {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req VerifyOTPRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Phone == "" || req.Code == "" {
+		writeError(w, "phone and code are required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.VerifyOTP(claims.UserID, req.Phone, req.Code); err != nil {
+		switch err {
+		case ErrInvalidOTP:
+			writeError(w, err.Error(), http.StatusUnauthorized)
+		case ErrExpiredOTP:
+			writeError(w, err.Error(), http.StatusUnauthorized)
+		case ErrBlocked:
+			writeError(w, err.Error(), http.StatusTooManyRequests)
+		default:
+			writeError(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, MessageResponse{Message: "phone verified successfully"})
+}
+
+// GET /auth/me  (requires JWT)
+func (h *Handler) MeHandler(w http.ResponseWriter, r *http.Request) {
+	claims, err := extractClaims(r)
+	if err != nil {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := h.service.GetUser(claims.UserID)
+	if err != nil {
+		writeError(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, toUserResponse(user))
+}
+
+// --- helpers ---
+
+func extractClaims(r *http.Request) (*Claims, error) {
 	authHeader := r.Header.Get("Authorization")
-	tokenString := strings.Split(authHeader, " ")[1]
-
-	claims := &Claims{}
-	jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtSecret, nil
-	})
-
-	user := usersByID[claims.UserID]
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "JWT protected endpoint",
-		"user":    user,
-	})
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		return nil, ErrUnauthorized
+	}
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+	return ValidateJWT(tokenStr)
 }
 
-func MeHandler(w http.ResponseWriter, r *http.Request) {
-	authHeader := r.Header.Get("Authorization")
-	tokenString := strings.Split(authHeader, " ")[1]
+func toUserResponse(u User) UserResponse {
+	return UserResponse{
+		ID:          u.ID,
+		Username:    u.Username,
+		Email:       u.Email,
+		PhoneNumber: u.PhoneNumber,
+		KYCStatus:   u.KYCStatus,
+		IsVerified:  u.IsVerified,
+	}
+}
 
-	claims := &Claims{}
-	jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtSecret, nil
-	})
-
-	user := usersByID[claims.UserID]
-
+func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(v)
+}
+
+func writeError(w http.ResponseWriter, message string, status int) {
+	writeJSON(w, status, ErrorResponse{Error: message})
 }

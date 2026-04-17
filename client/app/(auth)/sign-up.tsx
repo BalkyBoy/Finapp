@@ -257,7 +257,6 @@ const SignUp = () => {
               >
               <Text
                 style={{
-                  flex: 1,
                   marginLeft: 8,
                   fontFamily: "ReadexRegular",
                   fontSize: 14,
@@ -300,6 +299,7 @@ const SignUp = () => {
                 justifyContent: "center",
                 alignItems: "center",
                 marginBottom: 24,
+                top: 80,
               }}
               onPress={() => router.push("/(auth)/verification")}
             >
@@ -316,70 +316,8 @@ const SignUp = () => {
             <View
               style={{
                 flexDirection: "row",
-                alignItems: "center",
-                marginBottom: 24,
-              }}
-            >
-              <View
-                style={{
-                  flex: 1,
-                  height: 1,
-                  backgroundColor: "#ddd",
-                }}
-              />
-              <Text
-                style={{
-                  fontFamily: "ReadexLight",
-                  paddingHorizontal: 16,
-                  color: "#8E9BAE",
-                }}
-              >
-                OR
-              </Text>
-              <View
-                style={{
-                  flex: 1,
-                  height: 1,
-                  backgroundColor: "#ddd",
-                }}
-              />
-            </View>
-            <TouchableOpacity
-              // onPress={() => promptAsync()}
-              style={{
-                flexDirection: "row",
-                height: 56,
-                borderWidth: 1,
-                borderColor: "#ddd",
-                borderRadius: 8,
                 justifyContent: "center",
-                alignItems: "center",
-                marginBottom: 24,
-              }}
-            >
-              <Image
-                source={require("@/assets/images/google.png")}
-                style={{
-                  width: 24,
-                  height: 24,
-                  marginRight: 8,
-                }}
-              />
-              <Text
-                style={{
-                  fontFamily: "ReadexSemiBold",
-                  color: "#222222",
-                  fontSize: 14,
-                }}
-              >
-                Continue with Google
-              </Text>
-            </TouchableOpacity>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "center",
-                marginTop: 16,
+                top: 100,
               }}
             >
               <Text

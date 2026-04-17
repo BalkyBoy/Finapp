@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 const terms = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#EDEDED' }}>
-      <View style={{ padding: 16 }}>
+      <View style={{ padding: 16, flex: 1 }}>
         <View style={{
           flexDirection: 'row',
           justifyContent: 'space-between',
@@ -17,7 +17,7 @@ const terms = () => {
           <TouchableOpacity
             style={{
               padding: 10,
-              backgroundColor: '#EDEDED',
+              backgroundColor: '#CAA362',
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: 10,
@@ -32,18 +32,18 @@ const terms = () => {
           fontFamily: 'ReadexBold',
           fontSize: 24,
           marginBottom: 20,
-          textAlign: 'center'
+          textAlign: 'center',
         }}>
           Terms & Conditions
         </Text>
 
-        <ScrollView style={{ flex: 1, marginBottom: 20 }}>
+        <ScrollView style={{ marginBottom: 20 }}>
           <Text style={{
             fontFamily: 'ReadexRegular',
             fontSize: 14,
             lineHeight: 20,
             marginBottom: 16,
-            color: '#333'
+            color: '#000'
           }}>
             By using this app, you agree to the following terms and conditions:
           </Text>
@@ -106,7 +106,7 @@ const terms = () => {
         <TouchableOpacity
           style={{
             height: 56,
-            backgroundColor: '#5C8943',
+            backgroundColor: '#CAA362',
             borderRadius: 20,
             justifyContent: 'center',
             alignItems: 'center',

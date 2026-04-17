@@ -1,25 +1,40 @@
 package database
+
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var DB *pgxpool.Pool
+type Database struct {
+	Pool *pgxpool.Pool
+}
 
-func ConnectDB() {
-	var err error
-	DB, err = pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+func NewDatabase() (*Database, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	config, err := pgxpool.ParseConfig(os.Getenv("DATABASE_URL"))
 	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
+		return nil, fmt.Errorf("failed to parse db config: %w", err)
 	}
 
-	err = DB.Ping(context.Background())
+	config.MaxConns = 10
+	config.MinConns = 5
+	config.MaxConnLifetime = 5 * time.Minute
+	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
-		log.Fatalf("Unable to ping database: %v\n", err)
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
+	if err := pool.Ping(ctx); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
 	log.Println("Connected to database")
+
+	return &Database{Pool: pool}, nil
 }

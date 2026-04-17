@@ -4,30 +4,35 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/joho/godotenv"
 	"github.com/owopor/server/internal/auth"
+	"github.com/owopor/server/internal/database"
 )
 
 func main() {
-	// JWT auth
-	http.HandleFunc("/auth/register", auth.RegisterHandler)
-	http.HandleFunc("/login", auth.LoginHandler)
-	http.HandleFunc("/refresh", auth.RefreshTokenHandler)
-	http.HandleFunc("/forgot-password", auth.ForgotPasswordHandler)
-	http.HandleFunc("/reset-password", auth.ResetPasswordHandler)
-	http.HandleFunc("/protected", auth.AuthMiddleware(auth.ProtectedHandler))
-	http.HandleFunc("/me", auth.AuthMiddleware(auth.MeHandler))
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found")
 
-	// Session auth
-	http.HandleFunc("/session/login", auth.SessionLoginHandler)
-	http.HandleFunc("/session/logout", auth.SessionLogoutHandler)
-	http.HandleFunc("/session/protected", auth.SessionProtectedHandler)
+	}
 
-	// OAuth
-	http.HandleFunc("/auth/google", auth.GoogleLoginHandler)
-	http.HandleFunc("/auth/google/callback", auth.GoogleCallbackHandler)
-	http.HandleFunc("/auth/github", auth.GithubLoginHandler)
-	http.HandleFunc("/auth/github/callback", auth.GithubCallbackHandler)
+	db, err := database.NewDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Pool.Close()
 
-	log.Println("🚀 Complete Auth System running on :8080")
+	authRepo := auth.NewRepository(db.Pool)
+	authService := auth.NewService(authRepo)
+	authHandler := auth.NewHandler(authService)
+
+	http.HandleFunc("/auth/signup", authHandler.SignupHandler)
+	http.HandleFunc("/auth/login", authHandler.LoginHandler)
+	http.HandleFunc("/auth/phone", authHandler.AddPhoneHandler)
+	http.HandleFunc("/auth/resend", authHandler.ResendOTPHandler)
+	http.HandleFunc("/auth/verify", authHandler.VerifyOTPHandler)
+	http.HandleFunc("/auth/me", authHandler.MeHandler)
+
+	log.Println("Starting server...")
 	log.Fatal(http.ListenAndServe(":8080", nil))
+
 }
