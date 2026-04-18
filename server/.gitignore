@@ -1,0 +1,46 @@
+# Environment variables
+.env
+.env.local
+.env*.local
+
+# Go binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.so.*
+*.dylib
+*.test
+*.out
+
+# Go build cache
+.cache/
+.build/
+dist/
+
+# Dependency management
+vendor/
+go.sum
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+*.pem
+
+# Test coverage
+*.cover
+*.coverprofile
+coverage.out
+
+# Build artifacts
+/bin/
+/tmp/
