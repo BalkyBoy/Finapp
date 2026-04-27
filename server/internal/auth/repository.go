@@ -19,10 +19,10 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 
 // --- User ---
 
-func (r *Repository) CreateUser(username, email, passwordHash string) error {
+func (r *Repository) CreateUser(username, email, passwordHash, phoneNumber string) error {
 	_, err := r.pool.Exec(context.Background(),
-		`INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3)`,
-		username, email, passwordHash,
+		`INSERT INTO users (username, email, password_hash, phone_number) VALUES ($1, $2, $3, $4)`,
+		username, email, passwordHash, phoneNumber,
 	)
 	return err
 }

@@ -1,15 +1,10 @@
 package auth
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"time"
 
 	"github.com/gorilla/sessions"
 	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/github"
-	"golang.org/x/oauth2/google"
 )
 
 var (
@@ -29,29 +24,7 @@ var (
 	jwtSecret = []byte("jwt-secret-key-change-in-production")
 )
 
-// OAuth configurations
-var (
-	googleOAuthConfig = &oauth2.Config{
-		ClientID:     "YOUR_GOOGLE_CLIENT_ID",
-		ClientSecret: "YOUR_GOOGLE_CLIENT_SECRET",
-		RedirectURL:  "http://localhost:8080/auth/google/callback",
-		Scopes: []string{
-			"https://www.googleapis.com/auth/userinfo.email",
-			"https://www.googleapis.com/auth/userinfo.profile",
-		},
-		Endpoint: google.Endpoint,
-	}
 
-	githubOAuthConfig = &oauth2.Config{
-		ClientID:     "YOUR_GITHUB_CLIENT_ID",
-		ClientSecret: "YOUR_GITHUB_CLIENT_SECRET",
-		RedirectURL:  "http://localhost:8080/auth/github/callback",
-		Scopes:       []string{"user:email"},
-		Endpoint:     github.Endpoint,
-	}
-
-	oauthStateString = ""
-)
 
 func init() {
 	// Initialize with test users
@@ -67,9 +40,4 @@ func init() {
 	usersByID[user.ID] = user
 	usersByEmail[user.Email] = user
 	userIDCounter++
-
-	// Generate random state for OAuth
-	b := make([]byte, 32)
-	rand.Read(b)
-	oauthStateString = base64.URLEncoding.EncodeToString(b)
 }

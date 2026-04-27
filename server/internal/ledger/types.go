@@ -132,6 +132,7 @@ var (
 	ErrTransactionNotFound = fmt.Errorf("transaction not found")
 	ErrAccountNotFound     = fmt.Errorf("account not found")
 	ErrLedgerNotFound      = fmt.Errorf("ledger not found")
+	ErrUnsupportedAsset    = fmt.Errorf("Asset not supported")
 )
 
 type InsufficientFundsError struct {
@@ -152,7 +153,7 @@ type Engine interface {
 	CommitTransaction(ctx context.Context, ledger string, req TransactionRequest) (*Transaction, error)
 	RevertTransaction(ctx context.Context, ledger string, txID int64, reason string) (*Transaction, error)
 	GetTransaction(ctx context.Context, ledger string, txID int64) (*Transaction, error)
-	ListTransactions(ctx context.Context, ledger string, q TransactionQuery) ([]Transaction, int64 error)
+	ListTransactions(ctx context.Context, ledger string, q TransactionQuery) ([]Transaction, int64, error)
 	GetBalance(ctx context.Context, ledger string, account Address, asset Asset) (*Balance, error)
 	ListAccounts(ctx context.Context, ledger string, q AccountQuery) ([]Account, int64, error)
 	GetAccount(ctx context.Context, ledger string, account Address) (*Account, error)

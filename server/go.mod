@@ -7,11 +7,10 @@ require (
 	github.com/gorilla/sessions v1.4.0
 	github.com/jackc/pgx/v5 v5.7.6
 	golang.org/x/crypto v0.45.0
-	golang.org/x/oauth2 v0.33.0
 )
 
 require (
-	cloud.google.com/go/compute/metadata v0.3.0 // indirect
+	github.com/golang-migrate/migrate/v4 v4.19.1 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect

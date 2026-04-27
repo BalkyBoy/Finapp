@@ -40,7 +40,7 @@ func (s *Service) Signup(req SignupRequest) error {
 		return err
 	}
 
-	return s.repo.CreateUser(req.Username, req.Email, string(hash))
+	return s.repo.CreateUser(req.Username, req.Email, string(hash), req.PhoneNumber)
 }
 
 func (s *Service) Login(req LoginRequest) (string, User, error) {

@@ -59,3 +59,4 @@ type PasswordResetToken struct {
 	UserID    int
 	ExpiresAt time.Time
 }
+

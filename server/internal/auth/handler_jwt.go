@@ -21,10 +21,22 @@ func (h *Handler) SignupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Username == "" || req.Email == "" || req.Password == "" {
-		writeError(w, "username, email and password are required", http.StatusBadRequest)
-		return
-	}
+	if req.Username == "" {
+	writeError(w, "username is required", http.StatusBadRequest)
+	return
+}
+if req.Email == "" {
+	writeError(w, "email is required", http.StatusBadRequest)
+	return
+}
+if req.Password == "" {
+	writeError(w, "password is required", http.StatusBadRequest)
+	return
+}
+if req.PhoneNumber == "" {
+	writeError(w, "phone number is required", http.StatusBadRequest)
+	return
+}
 
 	if err := h.service.Signup(req); err != nil {
 		switch err {
